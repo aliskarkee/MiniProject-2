@@ -1,32 +1,36 @@
 import { useEffect, useState } from "react";
 
 function useCurrencyInfo(currency) {
-  const [data, setData] = useState({});
-  const [lastFetchTime, setLastFetchTime] = useState(null);
-  const cacheDuration = 5 * 60 * 1000; // 5 minutes
+  const [data, setData] = useState(null); 
+  const [error, setError] = useState(null); 
 
   useEffect(() => {
-    const now = Date.now();
+    const fetchCurrencyData = async () => {
+      try {
+        const response = await fetch(
+          `https://api.freecurrencyapi.com/v1/latest?apikey=fca_live_aEpEEfO7T8KqSs5nDnse9G0Sto5oVNt2TuFCANkm`
+        );
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const result = await response.json();
 
-    // If the data is older than the cache duration, fetch new data
-    if (!lastFetchTime || now - lastFetchTime > cacheDuration) {
-      fetch(
-        `http://api.exchangeratesapi.io/v1/latest?access_key=12674b7017a0be691082fe4223e4c7c4&format=1`
-      )
-        .then((res) => res.json())
-        .then((res) => {
-          if (res && res.rates) {
-            setData(res.rates);
-            setLastFetchTime(now); // Update last fetch time
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching currency data:", error);
-        });
-    }
-  }, [currency, lastFetchTime]);
+        const rates = result.data;
+        if (rates && rates[currency]) {
+          setData(rates); 
+        } else {
+          throw new Error("Currency not found in API response");
+        }
+      } catch (err) {
+        console.error("Failed to fetch currency data:", err);
+        setError(err.message); 
+      }
+    };
 
-  return data;
+    fetchCurrencyData();
+  }, [currency]);
+
+  return { data, error }; 
 }
 
 export default useCurrencyInfo;
